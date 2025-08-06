@@ -94,7 +94,7 @@ function App() {
     setCurrentIndex(0);
     setVisibleData([]);
     setScore({ correct: 0, total: 0, points: 0 });
-    setTotalGuesses(0);
+    // setTotalGuesses(0); // Removed as totalGuesses state is no longer used
     setShowGameOverDialog(false);
   };
 
