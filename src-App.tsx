@@ -3,7 +3,9 @@ import './src-App.css';
 import './src-avatar-animation.css';
 import './src-sound-control.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
+// Dialog components are used in AvatarDialog
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './src-components-ui-dialog'
+// Button component is used in the controls section
 import { Button } from './src-components-ui-button'
 import { motion } from 'framer-motion'
 import SoundControl from './src-sound-control';

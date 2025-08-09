@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import './src-avatar-animation.css';
 
@@ -6,11 +6,8 @@ import './src-avatar-animation.css';
 export interface AvatarAnimationProps {
   playerState: 'waiting' | 'riding' | 'fallen' | 'missed';
   currentPrice: number;
-  currentIndex: number;
   chartWidth: number;
   chartHeight: number;
-  priceRange: number[];
-  dateRange: string[];
   dragonIntensity?: number;
   narrativeMessage?: string;
 }
@@ -18,11 +15,8 @@ export interface AvatarAnimationProps {
 export const AvatarAnimation: React.FC<AvatarAnimationProps> = ({
   playerState,
   currentPrice,
-  currentIndex,
   chartWidth,
   chartHeight,
-  priceRange,
-  dateRange,
   dragonIntensity = 0,
   narrativeMessage = ''
 }) => {
