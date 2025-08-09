@@ -107,14 +107,35 @@ h1 {
   color: white;
 }
 
+.start-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
 .pause-button {
   background-color: #ffc107;
   color: #212529;
 }
 
+.pause-button:hover:not(:disabled) {
+  background-color: #e0a800;
+}
+
+.resume-button {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.resume-button:hover:not(:disabled) {
+  background-color: #138496;
+}
+
 .reset-button {
   background-color: #6c757d;
   color: white;
+}
+
+.reset-button:hover:not(:disabled) {
+  background-color: #5a6268;
 }
 
 .control-icon {

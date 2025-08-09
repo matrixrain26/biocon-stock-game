@@ -1,8 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
-import './src-App.css'
+import './src-App.css';
+import './src-avatar-animation.css';
+import './src-sound-control.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './src-components-ui-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './src-components-ui-dialog'
 import { Button } from './src-components-ui-button'
+import { motion } from 'framer-motion'
+import SoundControl from './src-sound-control';
+import { playSound, stopSound } from './src-sound-utils';
+import { getStockData } from './src-stock-data';
+
+// Import Avatar-themed game components
+import { AvatarAnimation } from './src-avatar-animation'
+import { AvatarDialog } from './src-avatar-dialog'
+import { avatarGameLogic, initialAvatarGameState } from './src-avatar-game-logic'
+// Import types from avatar components
 
 // Import BIOCON.NS data
 import bioconData from './biocon-data.json'
@@ -29,7 +41,6 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [showGuessDialog, setShowGuessDialog] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0, points: 0 });
-  // const [totalGuesses, setTotalGuesses] = useState(0);
   const [guessResult, setGuessResult] = useState({
     guess: '',
     actual: '',
@@ -39,11 +50,40 @@ function App() {
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [showGameOverDialog, setShowGameOverDialog] = useState(false);
   const timerRef = useRef<number | null>(null);
+  
+  // Avatar-themed game state
+  const [avatarGame, setAvatarGame] = useState(initialAvatarGameState);
+  const [previousPrice, setPreviousPrice] = useState<number | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
-  // Load data on mount
+  // Load data on mount and start soundtrack
   useEffect(() => {
-    // Load data from the JSON file
+        // Set initial data from local file to ensure the UI renders immediately
     setData(bioconData);
+    
+    // Then try to load the latest data asynchronously
+    const loadData = async () => {
+      try {
+        console.log('Fetching latest BIOCON.NS data...');
+        const latestData = await getStockData();
+        console.log(`Loaded ${latestData.length} days of BIOCON.NS data`);
+        setData(latestData);
+      } catch (error) {
+        console.error('Failed to load stock data:', error);
+        // We already set the fallback data above, so no need to do it again
+      }
+    };
+    
+    // Load latest data
+    loadData();
+    
+    // Play the Avatar soundtrack in a loop with lower volume
+    playSound('soundtrack', 0.3, true);
+    
+    // Cleanup function to stop soundtrack when component unmounts
+    return () => {
+      stopSound('soundtrack');
+    };
   }, []);
 
   // Handle playback
@@ -53,18 +93,39 @@ function App() {
         const currentData = data[currentIndex];
         setVisibleData(prev => [...prev, currentData]);
         
+        // Update previous price for animation
+        if (currentIndex > 0) {
+          setPreviousPrice(data[currentIndex - 1].close);
+        }
+        
         // Check if we've reached the end of data
-        if (currentIndex === data.length - 1) {
+        if (currentIndex >= data.length - 1) {
           setIsPaused(true);
           setShowGameOverDialog(true);
           return;
         }
         
+        // Update avatar game state based on price movement
+        const updatedAvatarState = avatarGameLogic.updatePlayerState(
+          avatarGame,
+          currentData.close,
+          previousPrice
+        );
+        setAvatarGame(updatedAvatarState);
+        
         // Check if close is above PAUSE_PRICE
         if (currentData.close > PAUSE_PRICE) {
           setIsPaused(true);
           setShowGuessDialog(true);
+          // Update avatar state to waiting when paused at decision point
+          setAvatarGame(prev => ({ 
+            ...prev, 
+            playerState: 'waiting',
+            backgroundImage: '/IMAGE/jack sully.png',
+            narrativeMessage: 'Jake Sully approaches the dragon path...'
+          }));
         } else {
+          // Only advance to the next day if not paused
           setCurrentIndex(prev => prev + 1);
         }
       }, PLAYBACK_SPEED);
@@ -75,7 +136,7 @@ function App() {
         clearTimeout(timerRef.current);
       }
     };
-  }, [isPlaying, isPaused, currentIndex, data]);
+  }, [isPlaying, isPaused, currentIndex, data, avatarGame, previousPrice]);
 
   const handleStart = () => {
     setIsPlaying(true);
@@ -85,8 +146,10 @@ function App() {
   const handlePause = () => {
     setIsPaused(true);
   };
-
-  // Reset function removed - using resetGame instead
+  
+  const handleResume = () => {
+    setIsPaused(false);
+  };
 
   const resetGame = () => {
     setIsPlaying(false);
@@ -94,8 +157,9 @@ function App() {
     setCurrentIndex(0);
     setVisibleData([]);
     setScore({ correct: 0, total: 0, points: 0 });
-    // setTotalGuesses(0); // Removed as totalGuesses state is no longer used
     setShowGameOverDialog(false);
+    setAvatarGame(avatarGameLogic.resetGame());
+    setPreviousPrice(null);
   };
 
   const checkGuess = (guess: 'up' | 'down') => {
@@ -121,6 +185,21 @@ function App() {
         isCorrect,
         nextDayPrice: nextDayData.close
       });
+      
+      // Update avatar game state based on guess
+      const updatedAvatarState = avatarGameLogic.processGuess(
+        guess,
+        currentIndex,
+        nextDayData,
+        avatarGame
+      );
+      
+      // Show ride image for successful answers
+      if (isCorrect) {
+        updatedAvatarState.backgroundImage = '/IMAGE/ride.png';
+      }
+      
+      setAvatarGame(updatedAvatarState);
     }
     setShowGuessDialog(false);
     setShowResultDialog(true);
@@ -135,7 +214,16 @@ function App() {
 
   return (
     <div className="container">
-      <h1>BIOCON.NS Stock Game</h1>
+      <SoundControl className="avatar-mode" />
+      <motion.h1 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-4xl font-bold text-blue-500 mb-6 text-center w-full"
+        style={{ textShadow: '0 0 10px rgba(0, 150, 255, 0.8)' }}
+      >
+        Toruk Makto: The BIOCON Dragon
+      </motion.h1>
       
       <div className="stats">
         <div className="stat-box">
@@ -154,35 +242,117 @@ function App() {
         </div>
       </div>
       
-      <div className="chart-container">
-        <LineChart 
-          width={1000} 
-          height={600} 
-          data={visibleData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+      <div className="chart-container" ref={chartRef}>
+        <motion.div 
+          className="chart-wrapper"
+          animate={{
+            scale: avatarGame.dragonIntensity > 0.7 ? [1, 1.02, 1] : 1,
+          }}
+          transition={{
+            duration: 1,
+            repeat: avatarGame.dragonIntensity > 0.7 ? Infinity : 0,
+            repeatType: "reverse"
+          }}
+          style={{ position: 'relative' }}
         >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="date" 
-            domain={['dataMin', 'dataMax']} 
-            type="category"
-            padding={{ right: 50 }}
-          />
-          <YAxis 
-            domain={[(dataMin: number) => Math.floor(dataMin * 0.95), (dataMax: number) => Math.ceil(dataMax * 1.05)]}
-            padding={{ top: 20, bottom: 20 }}
-          />
-          <Tooltip />
-          <ReferenceLine y={PAUSE_PRICE} stroke="red" strokeDasharray="3 3" />
-          <ReferenceLine y={TARGET_PRICE} stroke="green" strokeDasharray="3 3" label={`Target: ${TARGET_PRICE}`} />
-          <Line 
-            type="monotone" 
-            dataKey="close" 
-            stroke="#8884d8" 
-            dot={false}
-            isAnimationActive={true}
-          />
-        </LineChart>
+          <LineChart 
+            width={1000} 
+            height={600} 
+            data={visibleData}
+            margin={{ top: 5, right: 120, left: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.7)" />
+            <XAxis 
+              dataKey="date" 
+              tick={{ fill: '#000000', fontSize: 16, fontWeight: 'bold' }}
+              tickFormatter={(date) => {
+                const d = new Date(date);
+                const month = d.getMonth();
+                const year = d.getFullYear().toString().slice(-2);
+                
+                // Determine quarter based on month
+                let quarter;
+                if (month < 3) quarter = 'Q1';
+                else if (month < 6) quarter = 'Q2';
+                else if (month < 9) quarter = 'Q3';
+                else quarter = 'Q4';
+                
+                return `${quarter} ${year}`;
+              }}
+              padding={{ right: 40 }}
+              stroke="#000000"
+              strokeWidth={2}
+              interval={50} // Show only a few ticks
+              height={60} // Increase height for X-axis
+              label={{ value: 'Time Period', position: 'insideBottomRight', fill: '#000000', fontSize: 16, fontWeight: 'bold', dy: 15 }}
+            />
+            <YAxis 
+              domain={[(dataMin: number) => Math.floor(dataMin * 0.95), (dataMax: number) => Math.ceil(dataMax * 1.05)]}
+              padding={{ top: 20, bottom: 20 }}
+              tick={{ fill: '#000000', fontSize: 16, fontWeight: 'bold' }}
+              axisLine={{ stroke: '#000000', strokeWidth: 2 }}
+              tickLine={{ stroke: '#000000', strokeWidth: 2 }}
+              width={80}
+              tickCount={5}
+              tickFormatter={(value) => `₹${Math.round(value)}`}
+              label={{ value: 'Price (₹)', angle: -90, position: 'insideLeft', fill: '#000000', fontSize: 16, fontWeight: 'bold' }}
+            />
+            <Tooltip />
+            <ReferenceLine 
+              y={PAUSE_PRICE} 
+              stroke="#FF0000" 
+              strokeWidth={3}
+              strokeDasharray="5 5" 
+              ifOverflow="extendDomain"
+              label={{
+                value: 'Dragon Path (₹390)', 
+                position: 'insideTopLeft',
+                fill: '#FF0000',
+                fontSize: 16,
+                fontWeight: 'bold',
+                dy: -20
+              }}
+            />
+            <ReferenceLine 
+              y={TARGET_PRICE} 
+              stroke="#00FF00" 
+              strokeWidth={3}
+              strokeDasharray="5 5" 
+              ifOverflow="extendDomain"
+              label={{
+                value: 'Soaring Height (₹400)', 
+                position: 'insideTopLeft',
+                fill: '#00FF00',
+                fontSize: 16,
+                fontWeight: 'bold',
+                dy: -20
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="close"
+              stroke="#00ccff"
+              dot={false}
+              activeDot={{ r: 10, fill: '#00ffaa', stroke: '#00ccff', strokeWidth: 2 }}
+              strokeWidth={3}
+              animationDuration={300}
+              isAnimationActive={true}
+              animationEasing="ease-in-out"
+            />
+          </LineChart>
+          
+          {/* Avatar animation overlay */}
+          {visibleData.length > 0 && (
+            <AvatarAnimation
+              playerState={avatarGame.playerState}
+              currentPrice={visibleData[visibleData.length - 1]?.close || 0}
+              chartWidth={1000}
+              chartHeight={600}
+              dragonIntensity={avatarGame.dragonIntensity}
+              narrativeMessage={avatarGame.narrativeMessage}
+            />
+          )}
+        </motion.div>
       </div>
       
       <div className="controls">
@@ -201,6 +371,13 @@ function App() {
           <span className="control-icon">⏸</span> Pause
         </Button>
         <Button 
+          onClick={handleResume} 
+          disabled={!isPaused || !isPlaying || showGuessDialog || showResultDialog} 
+          className="control-button resume-button"
+        >
+          <span className="control-icon">▶▶</span> Resume
+        </Button>
+        <Button 
           onClick={resetGame} 
           className="control-button reset-button"
         >
@@ -208,60 +385,40 @@ function App() {
         </Button>
       </div>
       
-      <Dialog open={showGuessDialog} onOpenChange={setShowGuessDialog}>
-        <DialogContent className="guess-dialog">
-          <DialogHeader>
-            <DialogTitle>Make Your Prediction</DialogTitle>
-            <DialogDescription>
-              <div className="price-info">
-                <p><strong>Date:</strong> {data[currentIndex]?.date}</p>
-                <p><strong>Biocon stock price today is {PAUSE_PRICE}; do you think it will go above {TARGET_PRICE} and sustain there?</strong></p>
-                <p>Open: {data[currentIndex]?.open.toFixed(2)}</p>
-                <p>High: {data[currentIndex]?.high.toFixed(2)}</p>
-                <p>Low: {data[currentIndex]?.low.toFixed(2)}</p>
-                <p>Close: {data[currentIndex]?.close.toFixed(2)}</p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="guess-buttons">
-            <Button className="guess-button up" onClick={() => checkGuess('up')}>
-              <span className="arrow up">↑</span> Yes, Above {TARGET_PRICE}
-            </Button>
-            <Button className="guess-button down" onClick={() => checkGuess('down')}>
-              <span className="arrow down">↓</span> No, Below {TARGET_PRICE}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Avatar-themed Guess Dialog */}
+      <AvatarDialog
+        isOpen={showGuessDialog}
+        onClose={() => setShowGuessDialog(false)}
+        title="Ride the Dragon?"
+        description={`Toruk Makto approaches! The dragon's path has reached ₹${visibleData[currentIndex]?.close?.toFixed(2) || '0'}. Will it soar above ₹400 or dive below?`}
+        type="question"
+        onGuessUp={() => checkGuess('up')}
+        onGuessDown={() => checkGuess('down')}
+        playerState={avatarGame.playerState}
+      />
 
-      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{guessResult?.isCorrect ? 'Correct!' : 'Incorrect!'}</DialogTitle>
-          </DialogHeader>
-          <div>
-            <p>You guessed: {guessResult?.guess === 'up' ? `Above ${TARGET_PRICE}` : `Below ${TARGET_PRICE}`}</p>
-            <p>Actual next day close: {guessResult?.nextDayPrice?.toFixed(2)}</p>
-            <p>Result: {guessResult?.actual === 'up' ? `Above ${TARGET_PRICE}` : `Below ${TARGET_PRICE}`}</p>
-            <p>Points earned: {guessResult?.actual === 'up' ? '1' : '0'}</p>
-          </div>
-          <Button onClick={continuePlayback}>Continue</Button>
-        </DialogContent>
-      </Dialog>
+      {/* Avatar-themed Result Dialog */}
+      <AvatarDialog
+        isOpen={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        title={guessResult.isCorrect ? 'Successful Flight!' : 'Flight Failed!'}
+        description={avatarGame.narrativeMessage || `The dragon ${guessResult.actual === 'up' ? 'soared to' : 'dipped to'} ₹${guessResult.nextDayPrice.toFixed(2)}.`}
+        type="result"
+        onContinue={continuePlayback}
+        playerState={avatarGame.playerState}
+      />
 
-      <Dialog open={showGameOverDialog} onOpenChange={setShowGameOverDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Game Over!</DialogTitle>
-          </DialogHeader>
-          <div className="game-over-content">
-            <p className="final-score">Final Score: {score.correct} / {score.total}</p>
-            <p className="final-points">Total Points: {score.points}</p>
-            <p className="loser-message">Loser how many more times do you want to lose money? Just wait for it to close decisively above 400 and then it will FLY!</p>
-          </div>
-          <Button onClick={resetGame}>Play Again</Button>
-        </DialogContent>
-      </Dialog>
+      {/* Avatar-themed Game Over Dialog */}
+      <AvatarDialog
+        isOpen={showGameOverDialog}
+        onClose={() => setShowGameOverDialog(false)}
+        title="Journey Complete!"
+        description={`Your journey with Toruk Makto has ended. ${score.total > 0 ? (score.correct / score.total > 0.5 ? 'You have proven yourself worthy of the Great Dragon!' : 'You must train harder to master the skies!') : ''}\n\nLoser how many more times do you want to lose money? Just wait for it to close decisively above 400 and then it will FLY!`}
+        type="gameOver"
+        onRestart={resetGame}
+        playerState={avatarGame.playerState}
+        score={score}
+      />
     </div>
   );
 }

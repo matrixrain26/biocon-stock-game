@@ -1,0 +1,55 @@
+.sound-control {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.sound-control:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.sound-control svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Avatar-themed styling */
+.avatar-mode .sound-control {
+  background-color: rgba(56, 109, 176, 0.7);
+  border: 2px solid rgba(140, 200, 255, 0.6);
+}
+
+.avatar-mode .sound-control:hover {
+  background-color: rgba(56, 109, 176, 0.9);
+  border-color: rgba(140, 200, 255, 0.8);
+}
+
+/* Animation for sound waves when sound is on */
+@keyframes soundWave {
+  0% {
+    box-shadow: 0 0 0 0 rgba(140, 200, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(140, 200, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(140, 200, 255, 0);
+  }
+}
+
+.avatar-mode .sound-control.sound-on {
+  animation: soundWave 2s infinite;
+}

@@ -1,0 +1,219 @@
+import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { PlayerState, AvatarPosition, DragonState, AnimationSettings } from './src-avatar-types';
+import './src-avatar-animation.css';
+
+interface AvatarAnimationProps {
+  playerState: PlayerState;
+  currentPrice: number;
+  currentIndex: number;
+  chartWidth: number;
+  chartHeight: number;
+  priceRange: [number, number];
+  dateRange: [number, number];
+}
+
+export const AvatarAnimation: React.FC<AvatarAnimationProps> = ({
+  playerState,
+  currentPrice,
+  currentIndex,
+  chartWidth,
+  chartHeight,
+  priceRange,
+  dateRange,
+}) => {
+  const [position, setPosition] = useState<AvatarPosition>({ x: 0, y: 0 });
+  const [dragonState, setDragonState] = useState<DragonState>('normal');
+  const [animation, setAnimation] = useState<AnimationSettings>({
+    dragonOpacity: 0.3,
+    dragonScale: 1,
+    avatarScale: 1,
+    avatarRotation: 0,
+  });
+  const [trailParticles, setTrailParticles] = useState<AvatarPosition[]>([]);
+  const [narrativeText, setNarrativeText] = useState<string>('');
+  const [showNarrative, setShowNarrative] = useState<boolean>(false);
+  const trailRef = useRef<HTMLDivElement>(null);
+  const narrativeRef = useRef<HTMLDivElement>(null);
+
+  // Calculate position based on chart dimensions and current price/index
+  useEffect(() => {
+    if (currentPrice && currentIndex !== undefined && dateRange[1] !== dateRange[0]) {
+      // Calculate vertical position based on price
+      const minPrice = priceRange[0];
+      const maxPrice = priceRange[1];
+      const priceRange1 = maxPrice - minPrice;
+      const pricePercentage = (currentPrice - minPrice) / priceRange1;
+      const yPosition = chartHeight - (pricePercentage * chartHeight);
+      
+      // Calculate horizontal position based on current index
+      const minDate = dateRange[0];
+      const maxDate = dateRange[1];
+      const dateRange1 = maxDate - minDate;
+      const datePercentage = (currentIndex - minDate) / dateRange1;
+      const xPosition = datePercentage * chartWidth;
+      
+      const newPosition = { x: xPosition, y: yPosition };
+      setPosition(newPosition);
+      
+      // Add trail particle at current position
+      if (playerState === 'riding') {
+        const newParticle = { ...newPosition };
+        setTrailParticles(prev => [...prev.slice(-20), newParticle]); // Keep only last 20 particles
+      } else {
+        // Clear trail when not riding
+        setTrailParticles([]);
+      }
+    }
+  }, [currentPrice, currentIndex, chartWidth, chartHeight, priceRange, dateRange, playerState]);
+
+  // Update dragon state based on price movement
+  useEffect(() => {
+    if (currentIndex > 0) {
+      const priceChange = Math.abs(currentPrice - priceRange[0]) / 10;
+      if (priceChange > 3) {
+        setDragonState('swooping');
+      } else if (priceChange < 1) {
+        setDragonState('diving');
+      } else {
+        setDragonState('normal');
+      }
+    }
+  }, [currentPrice, currentIndex, priceRange]);
+
+  // Update animation settings based on player state
+  useEffect(() => {
+    switch (playerState) {
+      case 'waiting':
+        setAnimation({
+          dragonOpacity: 0.3,
+          dragonScale: 1,
+          avatarScale: 1,
+          avatarRotation: 0
+        });
+        setNarrativeText('Jake Sully waits for the dragon...');
+        break;
+      case 'riding':
+        setAnimation({
+          dragonOpacity: 0.6,
+          dragonScale: 1.2,
+          avatarScale: 1.1,
+          avatarRotation: 5
+        });
+        setNarrativeText('Riding Toruk Makto!');
+        break;
+      case 'fallen':
+        setAnimation({
+          dragonOpacity: 0.4,
+          dragonScale: 1,
+          avatarScale: 0.8,
+          avatarRotation: 180
+        });
+        setNarrativeText('Jake has fallen!');
+        break;
+      case 'missed':
+        setAnimation({
+          dragonOpacity: 0.2,
+          dragonScale: 0.9,
+          avatarScale: 0.7,
+          avatarRotation: -15
+        });
+        setNarrativeText('The dragon flies away!');
+        break;
+    }
+    
+    // Show narrative text when player state changes
+    setShowNarrative(true);
+    const timer = setTimeout(() => {
+      setShowNarrative(false);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [playerState]);
+
+  return (
+    <>
+      {/* Trail particles */}
+      <div className="price-trail" ref={trailRef}>
+        {trailParticles.map((particle, index) => (
+          <div 
+            key={index}
+            className="trail-particle"
+            style={{
+              left: `${particle.x}px`,
+              top: `${particle.y}px`,
+              opacity: (index / trailParticles.length) * 0.8
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Dragon silhouette overlay */}
+      <motion.div 
+        className={`dragon-silhouette ${dragonState}`}
+        style={{
+          opacity: animation.dragonOpacity,
+        }}
+        animate={{
+          scale: animation.dragonScale,
+        }}
+        transition={{ type: "spring", stiffness: 100, damping: 10 }}
+      />
+      
+      {/* Price indicators */}
+      <div 
+        className="price-indicator pause"
+        style={{
+          left: `${chartWidth * 0.8}px`,
+          top: `${chartHeight * (1 - (390 - priceRange[0]) / (priceRange[1] - priceRange[0]))}px`,
+        }}
+      />
+      <div 
+        className="price-indicator target"
+        style={{
+          left: `${chartWidth * 0.85}px`,
+          top: `${chartHeight * (1 - (400 - priceRange[0]) / (priceRange[1] - priceRange[0]))}px`,
+        }}
+      />
+      
+      {/* Avatar character */}
+      <motion.div 
+        className="avatar-container" 
+        style={{
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+        }}
+        animate={{
+          scale: animation.avatarScale,
+          rotate: animation.avatarRotation,
+        }}
+        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      >
+        <img 
+          src="/avatar-sully.png" 
+          alt="Jake Sully" 
+          className={`avatar-image ${playerState}`}
+          onError={(e) => {
+            // Fallback if image doesn't exist
+            const target = e.currentTarget as HTMLImageElement;
+            target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="blue"/><text x="20" y="25" font-size="20" text-anchor="middle" fill="white">JS</text></svg>';
+          }}
+        />
+      </motion.div>
+      
+      {/* Narrative text */}
+      {showNarrative && (
+        <div 
+          ref={narrativeRef}
+          className="narrative-text"
+          style={{
+            left: `${position.x + 20}px`,
+            top: `${position.y - 30}px`,
+          }}
+        >
+          {narrativeText}
+        </div>
+      )}
+    </>
+  );
+};

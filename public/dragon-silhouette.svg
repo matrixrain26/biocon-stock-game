@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+  <defs>
+    <linearGradient id="dragonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8e44ad" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#2980b9" stop-opacity="0.7" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Dragon body path - simplified silhouette -->
+  <path d="M50,300 C100,250 200,200 300,250 C400,300 500,200 600,250 C700,300 800,250 900,300 
+           C950,350 980,400 950,450 C900,500 850,480 800,450 C750,420 700,450 650,420
+           C600,390 550,400 500,380 C450,360 400,380 350,350 C300,320 250,350 200,320
+           C150,290 100,320 50,300 Z" 
+        fill="url(#dragonGradient)" 
+        stroke="#3498db" 
+        stroke-width="2"
+        opacity="0.4" />
+        
+  <!-- Dragon head -->
+  <path d="M900,300 C920,280 950,270 980,290 C990,300 995,320 980,330 C960,345 940,330 920,320 C910,315 890,310 900,300 Z"
+        fill="url(#dragonGradient)" 
+        stroke="#3498db" 
+        stroke-width="2"
+        opacity="0.6" />
+        
+  <!-- Dragon wings -->
+  <path d="M500,380 C550,300 600,250 650,300 C700,350 650,400 600,380 C550,360 500,380 500,380 Z"
+        fill="url(#dragonGradient)" 
+        stroke="#3498db" 
+        stroke-width="2"
+        opacity="0.5" />
+        
+  <!-- Dragon tail -->
+  <path d="M50,300 C30,320 20,350 30,380 C40,410 60,400 80,380 C100,360 80,330 50,300 Z"
+        fill="url(#dragonGradient)" 
+        stroke="#3498db" 
+        stroke-width="2"
+        opacity="0.5" />
+</svg>

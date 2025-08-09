@@ -1,0 +1,174 @@
+/* Avatar Animation Styles */
+
+.avatar-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.3s ease;
+}
+
+.avatar-image {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5));
+}
+
+.avatar-image.waiting {
+  animation: pulse 2s infinite;
+}
+
+.avatar-image.riding {
+  animation: fly 1s infinite alternate;
+}
+
+.avatar-image.fallen {
+  animation: fall 1s forwards;
+}
+
+.avatar-image.missed {
+  animation: miss 1s forwards;
+}
+
+.avatar-animation-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.dragon-silhouette {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0.15; /* Reduced opacity for better chart visibility */
+  z-index: 5;
+  filter: blur(4px); /* Increased blur for better chart visibility */
+}
+
+.dragon-silhouette.swooping {
+  animation: swoopAnimation 3s infinite;
+}
+
+.dragon-silhouette.diving {
+  animation: diveAnimation 2s infinite;
+}
+
+.price-trail {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.trail-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(136, 132, 216, 0.6);
+  filter: blur(2px);
+  animation: fadeOut 1s forwards;
+}
+
+/* Avatar state animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fly {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes miss {
+  0% { transform: scale(1) translateX(0); opacity: 1; }
+  100% { transform: scale(0.5) translateX(-50px); opacity: 0.5; }
+}
+
+/* Dragon animations */
+@keyframes swoopAnimation {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.1) translateY(-10px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes diveAnimation {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(20px) rotate(-2deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes fadeOut {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* Price point indicators */
+.price-indicator {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  z-index: 8;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+.price-indicator.target {
+  background-color: rgba(0, 255, 0, 0.7);
+  animation: targetPulse 2s infinite;
+}
+
+.price-indicator.pause {
+  background-color: rgba(255, 0, 0, 0.7);
+  animation: pausePulse 2s infinite;
+}
+
+@keyframes targetPulse {
+  0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.7); }
+  50% { box-shadow: 0 0 15px rgba(0, 255, 0, 0.9); }
+  100% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.7); }
+}
+
+@keyframes pausePulse {
+  0% { box-shadow: 0 0 5px rgba(255, 0, 0, 0.7); }
+  50% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.9); }
+  100% { box-shadow: 0 0 5px rgba(255, 0, 0, 0.7); }
+}
+
+/* Narrative text effects */
+.narrative-text {
+  position: absolute;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  animation: fadeInOut 3s forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(10px); }
+  20% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
